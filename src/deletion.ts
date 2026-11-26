@@ -1,10 +1,13 @@
-// Deleting a transaction, and undoing the last deletion (the toast's Undo button or Ctrl/Cmd+Z).
-import type { Transaction } from './lib/model';
-import { app, commit } from './state';
+// Deleting a transaction, and undoing deletions (the toast's Undo button or Ctrl/Cmd+Z), most recent first.
+import { monthOf, type Ledger, type Transaction } from './lib/model';
+import { app, commit, view } from './state';
 import { $ } from './ui/html';
 import { toast } from './ui/toast';
 
-let lastDeleted: Transaction | null = null;
+/** How many deletions of this visit can be undone. */
+const UNDO_LIMIT = 20;
+
+const deleted: Transaction[] = [];
 
 const rowButtons = () => [...document.querySelectorAll<HTMLElement>('#tx-list [data-edit]')];
 
@@ -19,23 +22,40 @@ export function deleteTransaction(id: string): void {
   const t = app.ledger.transactions.find((x) => x.id === id);
   if (!t) return;
   const index = rowButtons().findIndex((b) => b.dataset.edit === id);
-  lastDeleted = t;
+  deleted.push(t);
+  if (deleted.length > UNDO_LIMIT) deleted.shift();
   app.ledger = { ...app.ledger, transactions: app.ledger.transactions.filter((x) => x.id !== id) };
   commit();
   focusRow(index);
   toast('Transaction deleted.', { label: 'Undo', run: undoDelete, shortcut: 'Control+Z' });
 }
 
-/** Restores the last deleted transaction; false when there is nothing to undo. */
+/**
+ * The transaction as it can be restored into this ledger: if its category was removed after the deletion, it goes
+ * under "Other" (or another income category). Returns the category name it moved to, if it moved.
+ */
+function restorable(ledger: Ledger, t: Transaction): { transaction: Transaction; movedTo?: string } {
+  if (ledger.categories.some((c) => c.id === t.categoryId && c.kind === t.kind)) return { transaction: t };
+  const same = ledger.categories.filter((c) => c.kind === t.kind);
+  const fallback = same.find((c) => c.id === (t.kind === 'income' ? 'other-income' : 'other')) ?? same[0];
+  if (!fallback) return { transaction: t };
+  return { transaction: { ...t, categoryId: fallback.id }, movedTo: fallback.name };
+}
+
+/** Restores the most recent deletion and shows it in its month; false when there is nothing to undo. */
 export function undoDelete(): boolean {
-  const t = lastDeleted;
-  if (!t) return false;
-  lastDeleted = null;
+  const last = deleted.pop();
+  if (!last) return false;
+  const { transaction: t, movedTo } = restorable(app.ledger, last);
   app.ledger = { ...app.ledger, transactions: [...app.ledger.transactions, t] };
+  view.month = monthOf(t.date);
+  // Make sure the filters do not hide it.
+  if (view.filter !== 'all' && view.filter !== t.kind) view.filter = 'all';
+  if (view.categoryFilter && !view.categoryFilter.includes(t.categoryId)) view.categoryFilter = null;
   commit();
   const index = rowButtons().findIndex((b) => b.dataset.edit === t.id);
   if (index >= 0) focusRow(index);
   else $('tx-title').focus();
-  toast('Deletion undone.');
+  toast(movedTo ? `Deletion undone. Its category was removed, so it is under ${movedTo} now.` : 'Deletion undone.');
   return true;
 }

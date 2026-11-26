@@ -39,6 +39,7 @@ async function boot(data: Ledger | null = ledger()): Promise<void> {
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const editButtons = () => [...document.querySelectorAll<HTMLButtonElement>('#tx-list [data-edit]')];
 const click = (el: Element | null) => (el as HTMLElement).click();
+const ctrlZ = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
 const nameInput = (id: string) => document.querySelector<HTMLInputElement>(`#budget-edit [data-name="${id}"]`)!;
 const budgetInput = (id: string) => document.querySelector<HTMLInputElement>(`#budget-edit [data-budget="${id}"]`)!;
 const saved = (): Ledger => JSON.parse(localStorage.getItem('ledgerly.v1')!) as Ledger;
@@ -77,6 +78,46 @@ describe('deleting a transaction', () => {
     expect(document.activeElement).toBe($('tx-title'));
     document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
     expect(editButtons().map((b) => b.dataset.edit)).toEqual(['t1']);
+  });
+});
+
+describe('undoing deletions', () => {
+  it('undoes several deletions, most recent first, even after the toast is gone', async () => {
+    await boot();
+    click(document.querySelector('[data-delete="t1"]'));
+    click(document.querySelector('[data-delete="t2"]'));
+    expect(saved().transactions.map((t) => t.id)).toEqual(['t3']);
+    ctrlZ();
+    expect(saved().transactions.map((t) => t.id).toSorted()).toEqual(['t2', 't3']);
+    ctrlZ();
+    expect(saved().transactions.map((t) => t.id).toSorted()).toEqual(['t1', 't2', 't3']);
+    expect($('toast-text').textContent).toBe('Deletion undone.');
+  });
+
+  it('shows the restored transaction in its own month', async () => {
+    await boot();
+    const title = $('month-title').textContent;
+    click(document.querySelector('[data-delete="t1"]'));
+    click($('prev-month'));
+    expect($('month-title').textContent).not.toBe(title);
+    ctrlZ();
+    expect($('month-title').textContent).toBe(title);
+    expect(document.activeElement).toBe(document.querySelector('[data-edit="t1"]'));
+  });
+
+  it('puts a transaction whose category was removed meanwhile under Other', async () => {
+    const l = ledger();
+    l.categories.push({ id: 'pets', name: 'Pets', kind: 'expense', budget: 0, slot: 0, icon: 'tag' });
+    l.transactions.push({ id: 't4', date: `${month}-02`, kind: 'expense', categoryId: 'pets', amount: 2500, note: 'Cat food' });
+    await boot(l);
+    click(document.querySelector('[data-delete="t4"]'));
+    click($('edit-budgets'));
+    click(document.querySelector('#budget-edit [data-remove="pets"]'));
+    $<HTMLFormElement>('budget-form').requestSubmit();
+    expect(saved().categories.some((c) => c.id === 'pets')).toBe(false);
+    ctrlZ();
+    expect(saved().transactions.find((t) => t.id === 't4')?.categoryId).toBe('other');
+    expect($('toast-text').textContent).toContain('under Other');
   });
 });
 
