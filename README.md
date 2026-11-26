@@ -66,6 +66,8 @@ Node 22 or later. `dist/` is the folder that is served.
     src/lib/              no DOM: the data model and summaries, money parsing and formatting, CSV, storage,
                           example data
     tests/                Vitest tests for src/lib, the charts and the page
+    docs/                 README screenshots and a 512 px PNG of the icon
+    THIRD_PARTY_NOTICES   licence texts for the icons and the font
 
 ## Credits and licences
 
