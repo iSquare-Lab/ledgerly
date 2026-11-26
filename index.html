@@ -44,6 +44,11 @@
         <button type="button" class="button" id="clear-example">Clear example data</button>
       </div>
 
+      <p class="storage-note" id="storage-note" role="status" hidden>
+        <span id="storage-icon"></span>
+        <span>This browser is not allowing storage, so changes last for this visit only. Export a CSV to keep a copy.</span>
+      </p>
+
       <section class="stats" aria-label="Month at a glance" id="stats"></section>
 
       <div class="grid">
@@ -75,7 +80,7 @@
 
       <section class="card tx-card" aria-labelledby="tx-title">
         <div class="card-head">
-          <h2 id="tx-title">Transactions</h2>
+          <h2 id="tx-title" tabindex="-1">Transactions</h2>
           <div class="tx-tools">
             <div class="segmented" role="group" aria-label="Show">
               <button type="button" data-filter="all" aria-pressed="true">All</button>
@@ -113,19 +118,20 @@
         </fieldset>
         <label class="field">
           <span>Amount</span>
-          <span class="amount-input"><span class="amount-symbol" id="amount-symbol">$</span><input id="tx-amount" name="amount" inputmode="decimal" autocomplete="off" required placeholder="0.00" /></span>
+          <span class="amount-input"><span class="amount-symbol" id="amount-symbol">$</span><input id="tx-amount" name="amount" inputmode="decimal" autocomplete="off" required placeholder="0.00" aria-describedby="tx-amount-error" /></span>
         </label>
+        <p class="field-error" id="tx-amount-error"></p>
         <div class="field-row">
           <label class="field"><span>Category</span><select id="tx-category" name="category"></select></label>
-          <label class="field"><span>Date</span><input type="date" id="tx-date" name="date" required /></label>
+          <label class="field"><span>Date</span><input type="date" id="tx-date" name="date" required aria-describedby="tx-date-error" /></label>
         </div>
+        <p class="field-error" id="tx-date-error"></p>
         <label class="field"><span>Note <small>(optional)</small></span><input id="tx-note" name="note" maxlength="120" autocomplete="off" placeholder="What was it?" /></label>
-        <p class="form-error" id="tx-error" role="alert"></p>
         <div class="dialog-actions">
           <button type="button" class="button danger-ghost" id="tx-delete" hidden>Delete</button>
           <span class="spacer"></span>
           <button type="button" class="button" data-close>Cancel</button>
-          <button type="submit" class="button primary" id="tx-save">Save</button>
+          <button type="submit" class="button primary">Save</button>
         </div>
       </form>
     </dialog>
@@ -139,9 +145,10 @@
         <p class="dialog-note">Set how much you plan to spend each month in each category. Leave a budget empty for none.</p>
         <ul class="budget-edit" id="budget-edit"></ul>
         <div class="add-category">
-          <label class="field grow"><span>New category</span><input id="new-category" maxlength="40" placeholder="e.g. Pets" autocomplete="off" /></label>
+          <label class="field grow"><span>New category</span><input id="new-category" maxlength="40" placeholder="e.g. Pets" autocomplete="off" aria-describedby="new-category-error" /></label>
           <button type="button" class="button" id="add-category">Add category</button>
         </div>
+        <p class="field-error" id="new-category-error"></p>
         <p class="form-error" id="budget-error" role="alert"></p>
         <div class="dialog-actions">
           <span class="spacer"></span>
@@ -167,7 +174,11 @@
     </dialog>
 
     <div class="chart-tip" id="chart-tip" role="presentation"></div>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="toast" id="toast">
+      <p class="toast-text" id="toast-text" role="status" aria-live="polite"></p>
+      <button type="button" class="toast-action" id="toast-action" hidden></button>
+      <kbd class="toast-hint" id="toast-hint" aria-hidden="true" hidden></kbd>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

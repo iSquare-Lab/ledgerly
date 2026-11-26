@@ -49,3 +49,15 @@ export function parseLedger(json: string | null): Ledger | null {
 
 export const loadLedger = (): Ledger | null => parseLedger(store.get(KEY));
 export const saveLedger = (ledger: Ledger): boolean => store.set(KEY, JSON.stringify(ledger));
+
+/** Whether this browser lets the app write to local storage (private modes and strict settings may not). */
+export function storageAvailable(): boolean {
+  const probe = 'ledgerly.probe';
+  if (!store.set(probe, '1')) return false;
+  try {
+    window.localStorage.removeItem(probe);
+  } catch {
+    // Written but not removable: still usable.
+  }
+  return true;
+}
