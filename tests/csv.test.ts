@@ -55,6 +55,41 @@ describe('import and export', () => {
     expect(result.skippedDuplicates).toBe(1);
   });
 
+  it('keeps identical rows inside one file: two coffees on one day are two coffees', () => {
+    const text = 'date,type,category,amount,note\n2026-10-03,expense,Dining out,4.50,Coffee\n2026-10-03,expense,Dining out,4.50,Coffee\n';
+    const result = importCsv(text, emptyLedger());
+    expect(result.transactions).toHaveLength(2);
+    expect(result.skippedDuplicates).toBe(0);
+  });
+
+  it('matches duplicates against the ledger one for one', () => {
+    const ledger = emptyLedger();
+    const coffee = { date: '2026-10-03', kind: 'expense' as const, categoryId: 'dining', amount: 450, note: 'Coffee' };
+    ledger.transactions = [{ id: '1', ...coffee }];
+    const twice = emptyLedger();
+    twice.transactions = [
+      { id: 'a', ...coffee },
+      { id: 'b', ...coffee },
+    ];
+    // The ledger has one of the file's two coffees: one is skipped, the other imported.
+    const result = importCsv(exportCsv(twice), ledger);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.skippedDuplicates).toBe(1);
+    // Importing the same file again once both are in adds nothing.
+    const again = importCsv(exportCsv(twice), twice);
+    expect(again.transactions).toHaveLength(0);
+    expect(again.skippedDuplicates).toBe(2);
+  });
+
+  it('warns when the file names another currency than the ledger', () => {
+    const text = 'date,type,category,amount,currency,note\n2026-10-03,expense,Groceries,12.00,eur,Market\n2026-10-04,expense,Groceries,8.00,USD,Shop\n';
+    const result = importCsv(text, emptyLedger('USD'));
+    expect(result.transactions).toHaveLength(2);
+    expect(result.otherCurrencies).toEqual(['EUR']);
+    expect(importCsv(text.replace('eur', 'USD'), emptyLedger('USD')).otherCurrencies).toEqual([]);
+    expect(importCsv('date,amount\n2026-10-03,-5\n', emptyLedger('USD')).otherCurrencies).toEqual([]);
+  });
+
   it('reads a bank-style file with signed amounts, semicolons and decimal commas', () => {
     const text = 'Date;Description;Amount\n2026-09-01;Rent;-1.450,00\n2026-09-25;Salary;3.900,00\n2026/9/7;Coffee;-3,20\n';
     const result = importCsv(text, emptyLedger());

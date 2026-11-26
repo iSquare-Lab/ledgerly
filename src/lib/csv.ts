@@ -62,7 +62,10 @@ export function exportCsv(ledger: Ledger, transactions: Transaction[] = ledger.t
 export interface ImportResult {
   transactions: Transaction[];
   newCategories: Category[];
+  /** Rows that match a transaction already in the ledger (one for one), not imported. */
   skippedDuplicates: number;
+  /** Currency codes in the file's currency column that differ from the ledger's (amounts are never converted). */
+  otherCurrencies: string[];
   errors: string[];
 }
 
@@ -71,6 +74,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   type: ['type', 'kind'],
   category: ['category'],
   amount: ['amount', 'value', 'sum'],
+  currency: ['currency'],
   note: ['note', 'notes', 'description', 'memo', 'payee', 'details'],
 };
 
@@ -86,13 +90,14 @@ const MAX_ERRORS = 8;
 
 /**
  * Reads transactions from CSV. Required columns: date (YYYY-MM-DD) and amount. Optional: type (expense or income;
- * without it a negative amount is an expense), category (unknown names become new categories) and note.
+ * without it a negative amount is an expense), category (unknown names become new categories), currency (compared
+ * with the ledger's; amounts are never converted) and note.
  */
 export function importCsv(text: string, ledger: Ledger): ImportResult {
   const firstLine = text.replace(/^\ufeff/, '').split(/\r?\n/, 1)[0] ?? '';
   const delimiter = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ',';
   const rows = parseCsv(text, delimiter);
-  const result: ImportResult = { transactions: [], newCategories: [], skippedDuplicates: 0, errors: [] };
+  const result: ImportResult = { transactions: [], newCategories: [], skippedDuplicates: 0, otherCurrencies: [], errors: [] };
   if (rows.length === 0) {
     result.errors.push('The file is empty.');
     return result;
@@ -110,7 +115,11 @@ export function importCsv(text: string, ledger: Ledger): ImportResult {
 
   const categories = [...ledger.categories];
   const byName = new Map(categories.map((c) => [`${c.kind}:${c.name.toLowerCase()}`, c]));
-  const existing = new Set(ledger.transactions.map((t) => `${t.date}|${t.kind}|${t.categoryId}|${t.amount}|${t.note}`));
+  // How many of each transaction the ledger holds already. A file row that matches one uses it up, so importing the
+  // same file twice adds nothing, while two identical coffees on one day in a new file are both kept.
+  const existing = new Map<string, number>();
+  for (const t of ledger.transactions) existing.set(dedupeKey(t), (existing.get(dedupeKey(t)) ?? 0) + 1);
+  const currencies = new Set<string>();
   const addError = (msg: string) => {
     if (result.errors.length < MAX_ERRORS) result.errors.push(msg);
     else if (result.errors.length === MAX_ERRORS) result.errors.push('More rows could not be read.');
@@ -148,16 +157,22 @@ export function importCsv(text: string, ledger: Ledger): ImportResult {
       result.newCategories.push(category);
     }
     const note = cell('note').replace(/^'(?=[=+\-@])/, '').slice(0, 120);
-    const key = `${date}|${kind}|${category.id}|${amount}|${note}`;
-    if (existing.has(key)) {
+    const currency = cell('currency').toUpperCase();
+    if (/^[A-Z]{3}$/.test(currency) && currency !== ledger.currency) currencies.add(currency);
+    const record = { date, kind, categoryId: category.id, amount, note };
+    const left = existing.get(dedupeKey(record)) ?? 0;
+    if (left > 0) {
+      existing.set(dedupeKey(record), left - 1);
       result.skippedDuplicates++;
       return;
     }
-    existing.add(key);
-    result.transactions.push({ id: newId(), date, kind, categoryId: category.id, amount, note });
+    result.transactions.push({ id: newId(), ...record });
   });
+  result.otherCurrencies = [...currencies].toSorted();
   return result;
 }
+
+const dedupeKey = (t: Omit<Transaction, 'id'>): string => JSON.stringify([t.date, t.kind, t.categoryId, t.amount, t.note]);
 
 /** Whether a signed-amount file (no type column) uses negative numbers, meaning positives are income. */
 function hasNegative(rows: string[][], amountCol: number, delimiter: string): boolean {
