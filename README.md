@@ -43,4 +43,4 @@ Node 22 or later.
 
 ## Licence
 
-MIT © 2026 Strux
+MIT © 2026 iSquare Lab
