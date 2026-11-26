@@ -85,7 +85,9 @@ export function trendSvg(months: TrendMonth[], currency: string, width: number, 
   // Room right of the bar for the income amount; narrow charts keep the tick and leave the amount to the tooltip.
   const labelIncome = colW / 2 - barW / 2 - 10 >= 44;
   const parts: string[] = [];
-  for (let v = 0; v <= yMax + 1; v += step) {
+  // With nothing to show, draw only the baseline and say so, rather than a meaningless scale.
+  const empty = months.every((m) => m.spent === 0 && m.income === 0);
+  for (let v = 0; v <= (empty ? 0 : yMax + 1); v += step) {
     parts.push(`<line class="${v === 0 ? 'axis-base' : 'gridline'}" x1="${left}" x2="${right}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>`);
     parts.push(`<text class="tick" x="${left - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${esc(formatMoneyCompact(v, currency))}</text>`);
   }
@@ -126,6 +128,9 @@ export function trendSvg(months: TrendMonth[], currency: string, width: number, 
       `<rect class="hit" x="${(cx - colW / 2).toFixed(1)}" y="${top}" width="${colW.toFixed(1)}" height="${bottom - top}" ${tip} data-month="${esc(m.month)}"/>`,
     );
   });
+  if (empty) {
+    parts.push(`<text class="trend-empty" x="${((left + right) / 2).toFixed(1)}" y="${((top + bottom) / 2).toFixed(1)}" text-anchor="middle">Nothing recorded in these months yet</text>`);
+  }
   return `<svg class="trend" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false">${parts.join('')}</svg>`;
 }
 

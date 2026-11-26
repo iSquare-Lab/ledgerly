@@ -139,6 +139,8 @@
 }
 html {
   -webkit-text-size-adjust: 100%;
+  /* Anything scrolled to or focused lands below the sticky top bar, never under it. */
+  scroll-padding-top: 84px;
 }
 body {
   margin: 0;
@@ -334,6 +336,8 @@ select {
 .brand {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 40px;
   min-height: 40px;
   border-radius: 10px;
   gap: 10px;
@@ -524,7 +528,6 @@ main {
   margin-bottom: 14px;
 }
 .card-head h2 {
-  scroll-margin-top: 84px;
   font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.015em;
@@ -549,6 +552,21 @@ main {
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 22px;
   align-items: center;
+}
+/* Beside the Budgets card (wide screens) the donut sits above its legend, so both cards are about as tall. */
+@media (min-width: 1001px) {
+  .where {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    align-content: start;
+  }
+  .where .legend {
+    width: 100%;
+  }
+  .where .empty {
+    align-items: center;
+    text-align: center;
+  }
 }
 .donut-wrap {
   width: 220px;
@@ -737,6 +755,11 @@ main {
   font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+.trend .trend-empty {
+  fill: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
 }
 .trend .hit {
   fill: transparent;
@@ -1041,6 +1064,9 @@ main {
 #new-category-error {
   margin: 8px 0 0;
 }
+#budget-error {
+  margin: 12px 0 8px;
+}
 .be-row .field {
   margin: 0;
 }
@@ -1074,6 +1100,24 @@ main {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+.import-warning {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--series-4) 14%, var(--surface));
+  font-size: 13.5px;
+}
+.import-warning p:first-child {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.import-warning .icon {
+  flex: none;
+  margin-top: 1px;
 }
 .import-errors {
   margin: 10px 0;
@@ -1210,8 +1254,8 @@ main {
     padding-bottom: 10px;
     gap: 10px;
   }
-  .card-head h2 {
-    scroll-margin-top: 132px;
+  html {
+    scroll-padding-top: 140px;
   }
   .month-nav {
     order: 3;

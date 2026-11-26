@@ -67,6 +67,7 @@ describe('trendSvg', () => {
     expect(svg).not.toContain('income-tick');
     const labels = axisLabels(svg);
     expect(new Set(labels).size).toBe(labels.length);
+    expect(svg).toContain('Nothing recorded in these months yet');
   });
   it('stacks spending, marks and labels income, and describes each month', () => {
     const svg = trendSvg([month('2026-10', 420000, [150000, 30000]), month('2026-11', 0, [0, 12000])], 'USD', 800, '2026-11');

@@ -1,4 +1,5 @@
-// Inline SVG icons (24×24, stroke-based). Decorative: hidden from assistive technology.
+// Inline SVG icons (24×24, stroke-based). Decorative: hidden from assistive technology. Many shapes are redrawn from
+// Lucide (ISC) and Feather (MIT); their licences are in THIRD_PARTY_NOTICES.
 const svg = (body: string) =>
   `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
 
