@@ -321,9 +321,8 @@ select {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-  backdrop-filter: saturate(1.3) blur(12px);
-  -webkit-backdrop-filter: saturate(1.3) blur(12px);
+  /* Opaque: content scrolling underneath must never show through the buttons and the month title. */
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 .topbar-inner {
@@ -335,6 +334,8 @@ select {
 .brand {
   display: inline-flex;
   align-items: center;
+  min-height: 40px;
+  border-radius: 10px;
   gap: 10px;
   color: var(--text);
   text-decoration: none;
@@ -537,7 +538,13 @@ main {
 }
 
 /* ---------- Donut ---------- */
+.grid > .card {
+  display: flex;
+  flex-direction: column;
+}
 .where {
+  flex: 1;
+  align-content: center;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 22px;
@@ -1258,6 +1265,67 @@ main {
   }
   .stats {
     gap: 10px;
+  }
+}
+
+/* Phones and touch screens: every control at least 40 px, keyboard-only hints hidden. */
+@media (max-width: 600px), (pointer: coarse) {
+  .icon-button.small,
+  .icon-button.tiny {
+    width: 40px;
+    height: 40px;
+  }
+  .segmented {
+    padding: 2px;
+  }
+  .segmented button {
+    height: 40px;
+    padding: 0 14px;
+  }
+  .button.ghost,
+  .add-category .button {
+    height: 42px;
+  }
+  .text-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  .legend-item {
+    min-height: 40px;
+  }
+  .kind-toggle span {
+    padding: 10px 8px;
+  }
+  .toast-action {
+    min-height: 40px;
+    margin-block: -10px;
+  }
+  .footer a {
+    display: inline-block;
+    padding: 10px 0;
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .toast-hint {
+    display: none;
+  }
+}
+
+/* Keep the bottom-right corner clear for the host's round return button (about 56 px). */
+@media (max-width: 600px) {
+  .footer {
+    padding-bottom: 72px;
+  }
+  .toast {
+    left: 16px;
+    right: 72px;
+    bottom: 16px;
+    max-width: none;
+    transform: translateY(20px);
+  }
+  .toast.show {
+    transform: none;
   }
 }
 
