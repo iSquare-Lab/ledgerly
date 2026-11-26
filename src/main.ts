@@ -1,7 +1,7 @@
 import './styles.css';
 import { exportCsv, importCsv, type ImportResult } from './lib/csv';
 import { clearExampleData, exampleLedger, hasExampleData } from './lib/example';
-import { CURRENCIES, formatMoney, parseAmount } from './lib/money';
+import { amountInputText, CURRENCIES, formatMoney, parseAmount } from './lib/money';
 import {
   addMonths,
   donutSlices,
@@ -251,8 +251,13 @@ function render(): void {
 // ---------- Tooltip for charts ----------
 const tip = $('chart-tip');
 function showTip(target: Element, x: number, y: number): void {
-  const parts = (target.getAttribute('data-tip') ?? '').split('|');
-  tip.innerHTML = `<strong>${esc(parts[0])}</strong>${parts.slice(1).map((p) => `<span>${esc(p)}</span>`).join('')}`;
+  let parts: string[];
+  try {
+    parts = JSON.parse(target.getAttribute('data-tip') ?? '[]') as string[];
+  } catch {
+    return;
+  }
+  tip.innerHTML = `<strong>${esc(parts[0] ?? '')}</strong>${parts.slice(1).map((p) => `<span>${esc(p)}</span>`).join('')}`;
   tip.classList.add('show');
   const w = tip.offsetWidth;
   const h = tip.offsetHeight;
@@ -394,7 +399,7 @@ function renderBudgetEdit(): void {
       (c) => `<li class="be-row">
         <span class="swatch" data-slot="${c.slot}"></span>
         <label class="field grow"><span class="sr-only">Category name</span><input data-name="${esc(c.id)}" value="${esc(c.name)}" maxlength="40" /></label>
-        <label class="field budget-field"><span class="sr-only">${esc(c.name)} monthly budget</span><span class="amount-input"><span class="amount-symbol">${esc(currencySymbol())}</span><input data-budget="${esc(c.id)}" inputmode="decimal" value="${c.budget ? (c.budget / 100).toFixed(0) : ''}" placeholder="None" /></span></label>
+        <label class="field budget-field"><span class="sr-only">${esc(c.name)} monthly budget</span><span class="amount-input"><span class="amount-symbol">${esc(currencySymbol())}</span><input data-budget="${esc(c.id)}" inputmode="decimal" value="${c.budget ? amountInputText(c.budget) : ''}" placeholder="None" /></span></label>
         <button type="button" class="icon-button tiny" data-remove="${esc(c.id)}" aria-label="Remove ${esc(c.name)}" ${used.has(c.id) || c.id === 'other' ? 'disabled title="In use: categories with transactions stay"' : ''}>${icons.trash()}</button>
       </li>`,
     )

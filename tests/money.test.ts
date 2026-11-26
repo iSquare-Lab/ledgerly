@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, parseAmount } from '../src/lib/money';
+import { amountInputText, formatMoney, parseAmount } from '../src/lib/money';
 
 describe('parseAmount', () => {
   it('reads plain and grouped amounts into cents', () => {
@@ -39,5 +39,17 @@ describe('formatMoney', () => {
     expect(formatMoney(123456, 'USD')).toBe('$1,234.56');
     expect(formatMoney(-500, 'EUR')).toBe('−€5.00');
     expect(formatMoney(150000, 'JPY')).toBe('¥1,500');
+  });
+});
+
+describe('amountInputText', () => {
+  it('shows whole amounts plainly and keeps cents', () => {
+    expect(amountInputText(25000)).toBe('250');
+    expect(amountInputText(25050)).toBe('250.50');
+    expect(amountInputText(5)).toBe('0.05');
+    expect(amountInputText(0)).toBe('0');
+  });
+  it('reads back to the same cents, so saving a budget unchanged keeps it', () => {
+    for (const cents of [1, 99, 100, 25050, 123456, 999999]) expect(parseAmount(amountInputText(cents))).toBe(cents);
   });
 });

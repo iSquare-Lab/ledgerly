@@ -706,6 +706,12 @@ main {
   stroke-width: 2.5;
   stroke-linecap: round;
 }
+.trend .income-label {
+  fill: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .trend .hit {
   fill: transparent;
   cursor: pointer;

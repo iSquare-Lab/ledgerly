@@ -78,3 +78,10 @@ export function parseAmount(text: string, decimalComma = false): number | null {
   if (!Number.isSafeInteger(cents)) return null;
   return negative ? -cents : cents;
 }
+
+/**
+ * The text an amount input starts with: "250" for a whole amount, "250.50" when there are cents, so editing and
+ * saving never rounds a value away. Reads back exactly with parseAmount.
+ */
+export const amountInputText = (cents: number): string =>
+  cents % 100 === 0 ? String(cents / 100) : `${Math.trunc(cents / 100)}.${String(Math.abs(cents % 100)).padStart(2, '0')}`;

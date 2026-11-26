@@ -2,6 +2,7 @@
 // for the neutral slice), so light and dark themes each use their own validated steps.
 import { formatMoney, formatMoneyCompact } from '../lib/money';
 import type { MonthKey } from '../lib/model';
+import { esc } from './html';
 
 export interface Slice {
   label: string;
@@ -12,6 +13,9 @@ export interface Slice {
 
 const TAU = Math.PI * 2;
 const seriesVar = (slot: number) => `var(--series-${slot})`;
+
+/** A chart tooltip: a title and lines, stored as JSON so any text (even "|" or quotes) survives. */
+const tipAttr = (title: string, ...lines: string[]): string => `data-tip="${esc(JSON.stringify([title, ...lines]))}"`;
 
 function arc(cx: number, cy: number, r0: number, r1: number, a0: number, a1: number): string {
   const large = a1 - a0 > Math.PI ? 1 : 0;
@@ -38,18 +42,18 @@ export function donutSvg(slices: Slice[], total: number, currency: string, centr
       const pct = Math.round((s.amount / total) * 1000) / 10;
       parts.push(
         `<path d="${arc(c, c, r0, r1, a, a + sweep)}" fill="${seriesVar(s.slot)}" class="donut-seg" fill-rule="evenodd"
-          data-tip="${escapeAttr(`${s.label}|${formatMoney(s.amount, currency)} · ${pct}% of spending`)}"/>`,
+          ${tipAttr(s.label, `${formatMoney(s.amount, currency)} · ${pct}% of spending`)}/>`,
       );
       a += sweep;
     }
   }
-  return `<svg class="donut" viewBox="0 0 ${size} ${size}" role="img" aria-label="${escapeAttr(
+  return `<svg class="donut" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(
     total > 0
       ? `Spending by category: ${slices.map((s) => `${s.label} ${formatMoney(s.amount, currency)}`).join(', ')}`
       : 'No spending recorded this month',
   )}">${parts.join('')}
-    <text x="${c}" y="${c - 8}" text-anchor="middle" class="donut-label">${escapeText(centreLabel)}</text>
-    <text x="${c}" y="${c + 18}" text-anchor="middle" class="donut-total">${escapeText(formatMoney(total, currency))}</text>
+    <text x="${c}" y="${c - 8}" text-anchor="middle" class="donut-label">${esc(centreLabel)}</text>
+    <text x="${c}" y="${c + 18}" text-anchor="middle" class="donut-total">${esc(formatMoney(total, currency))}</text>
   </svg>`;
 }
 
@@ -62,7 +66,10 @@ export interface TrendMonth {
   spent: number;
 }
 
-/** Stacked monthly spending by category, with each month's income marked as a tick on the same money axis. */
+/**
+ * Stacked monthly spending by category, with each month's income marked as a labelled tick on the same money axis.
+ * The axis steps are at least one currency unit, so an empty month never repeats a "$0" label.
+ */
 export function trendSvg(months: TrendMonth[], currency: string, width: number, selected: MonthKey): string {
   const height = 240;
   const left = 54;
@@ -70,15 +77,17 @@ export function trendSvg(months: TrendMonth[], currency: string, width: number, 
   const top = 12;
   const bottom = height - 28;
   const max = Math.max(1, ...months.map((m) => Math.max(m.spent, m.income)));
-  const step = niceStep(max / 4);
+  const step = niceStep(Math.max(max / 4, 100));
   const yMax = Math.ceil(max / step) * step;
   const y = (v: number) => bottom - (v / yMax) * (bottom - top);
   const colW = (right - left) / months.length;
-  const barW = Math.min(46, colW * 0.5);
+  const barW = Math.min(72, colW * 0.5);
+  // Room right of the bar for the income amount; narrow charts keep the tick and leave the amount to the tooltip.
+  const labelIncome = colW / 2 - barW / 2 - 10 >= 44;
   const parts: string[] = [];
   for (let v = 0; v <= yMax + 1; v += step) {
     parts.push(`<line class="${v === 0 ? 'axis-base' : 'gridline'}" x1="${left}" x2="${right}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>`);
-    parts.push(`<text class="tick" x="${left - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${escapeText(formatMoneyCompact(v, currency))}</text>`);
+    parts.push(`<text class="tick" x="${left - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${esc(formatMoneyCompact(v, currency))}</text>`);
   }
   months.forEach((m, i) => {
     const cx = left + colW * (i + 0.5);
@@ -99,12 +108,22 @@ export function trendSvg(months: TrendMonth[], currency: string, width: number, 
     if (m.income > 0) {
       const iy = y(m.income);
       parts.push(`<line class="income-tick" x1="${(cx - barW / 2 - 6).toFixed(1)}" x2="${(cx + barW / 2 + 6).toFixed(1)}" y1="${iy.toFixed(1)}" y2="${iy.toFixed(1)}"/>`);
+      if (labelIncome) {
+        parts.push(
+          `<text class="income-label" x="${(cx + barW / 2 + 10).toFixed(1)}" y="${(iy + 4).toFixed(1)}">${esc(formatMoneyCompact(m.income, currency))}</text>`,
+        );
+      }
     }
     const isSel = m.month === selected;
-    parts.push(`<text class="tick month${isSel ? ' is-selected' : ''}" x="${cx.toFixed(1)}" y="${height - 8}" text-anchor="middle">${escapeText(m.label)}</text>`);
-    const tip = `${m.label}|Spent ${formatMoney(m.spent, currency)}|Income ${formatMoney(m.income, currency)}|${m.income - m.spent >= 0 ? 'Left over' : 'Overspent'} ${formatMoney(Math.abs(m.income - m.spent), currency)}`;
+    parts.push(`<text class="tick month${isSel ? ' is-selected' : ''}" x="${cx.toFixed(1)}" y="${height - 8}" text-anchor="middle">${esc(m.label)}</text>`);
+    const tip = tipAttr(
+      m.label,
+      `Spent ${formatMoney(m.spent, currency)}`,
+      `Income ${formatMoney(m.income, currency)}`,
+      `${m.income - m.spent >= 0 ? 'Left over' : 'Overspent'} ${formatMoney(Math.abs(m.income - m.spent), currency)}`,
+    );
     parts.push(
-      `<rect class="hit" x="${(cx - colW / 2).toFixed(1)}" y="${top}" width="${colW.toFixed(1)}" height="${bottom - top}" data-tip="${escapeAttr(tip)}" data-month="${m.month}"/>`,
+      `<rect class="hit" x="${(cx - colW / 2).toFixed(1)}" y="${top}" width="${colW.toFixed(1)}" height="${bottom - top}" ${tip} data-month="${esc(m.month)}"/>`,
     );
   });
   return `<svg class="trend" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false">${parts.join('')}</svg>`;
@@ -115,11 +134,9 @@ function roundedTop(x: number, y: number, w: number, h: number, r: number): stri
   return `M${x} ${y + h}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${y + h}Z`;
 }
 
-function niceStep(raw: number): number {
+/** A round axis step at or above `raw`: 1, 2, 2.5 or 5 times a power of ten, and never below 1. */
+export function niceStep(raw: number): number {
   const pow = 10 ** Math.floor(Math.log10(Math.max(raw, 1)));
   for (const m of [1, 2, 2.5, 5, 10]) if (m * pow >= raw) return m * pow;
   return 10 * pow;
 }
-
-const escapeText = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const escapeAttr = (s: string) => escapeText(s).replace(/"/g, '&quot;');
