@@ -1,5 +1,5 @@
 {
   "name": "Ledgerly",
-  "description": "See where your money goes each month: budgets by category, a spending donut and trends, no bank link.",
+  "description": "See where your money goes each month: budgets by category, a spending donut and trends, CSV in Ledgerly's own format. No bank link.",
   "category": "data-charts"
 }
