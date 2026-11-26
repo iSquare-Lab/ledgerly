@@ -13,6 +13,12 @@ describe('parseAmount', () => {
     expect(parseAmount('12,50')).toBe(1250);
     expect(parseAmount('1.234,56')).toBe(123456);
     expect(parseAmount('1 234,56', true)).toBe(123456);
+    expect(parseAmount('1.234.567,8', true)).toBe(123456780);
+  });
+  it('refuses decimal points where a decimal comma is expected', () => {
+    expect(parseAmount('1,234.50', true)).toBeNull();
+    expect(parseAmount('12.50', true)).toBeNull();
+    expect(parseAmount('1.23', true)).toBeNull();
   });
   it('reads signs, parentheses and currency symbols', () => {
     expect(parseAmount('-45.00')).toBe(-4500);

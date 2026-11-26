@@ -68,6 +68,9 @@ export function parseAmount(text: string, decimalComma = false): number | null {
   s = s.replace(/^[^\d.,]+/, '');
   if (!decimalComma && /^\d{1,3}(\.\d{3})+,\d{1,2}$/.test(s)) decimalComma = true; // "1.234,50"
   if (!decimalComma && /^\d+,\d{1,2}$/.test(s)) decimalComma = true; // "12,50"
+  // With a decimal comma, dots may only group thousands ("1.234,50"); "1,234.50" is the other convention, so refuse
+  // it rather than read it as 1.23.
+  if (decimalComma && s.includes('.') && !/^\d{1,3}(\.\d{3})+(,\d*)?$/.test(s)) return null;
   if (decimalComma) s = s.replace(/\./g, '').replace(',', '.');
   else s = s.replace(/,/g, '');
   if (!/^(\d+(\.\d*)?|\.\d+)$/.test(s)) return null;

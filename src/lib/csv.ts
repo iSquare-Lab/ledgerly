@@ -44,6 +44,9 @@ export const toCsv = (rows: string[][]): string => rows.map((r) => r.map(quote).
 /** Guards a text field against spreadsheet formula injection when the file is opened in a spreadsheet. */
 const safeCell = (v: string): string => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v);
 
+/** Undoes safeCell on import: drops the apostrophe only where safeCell would have added one. */
+const unguardCell = (v: string): string => v.replace(/^'(?=[=+\-@\t\r])/, '');
+
 export function exportCsv(ledger: Ledger, transactions: Transaction[] = ledger.transactions): string {
   const name = new Map(ledger.categories.map((c) => [c.id, c.name]));
   const rows = transactions
@@ -125,13 +128,14 @@ export function importCsv(text: string, ledger: Ledger): ImportResult {
     else if (result.errors.length === MAX_ERRORS) result.errors.push('More rows could not be read.');
   };
 
-  const signed = col.type === undefined && hasNegative(rows, col.amount, delimiter);
+  const decimalComma = delimiter === ';' && !usesDecimalPoint(rows, col.amount);
+  const signed = col.type === undefined && hasNegative(rows, col.amount, decimalComma);
   rows.slice(1).forEach((r, i) => {
     const line = i + 2;
     const cell = (key: string) => (col[key] === undefined ? '' : (r[col[key]] ?? '').trim());
     const date = normaliseDate(cell('date'));
     if (!date) return addError(`Row ${line}: “${cell('date')}” is not a date in YYYY-MM-DD form.`);
-    const cents = parseAmount(cell('amount'), delimiter === ';');
+    const cents = parseAmount(cell('amount'), decimalComma);
     if (cents === null || cents === 0) return addError(`Row ${line}: “${cell('amount')}” is not an amount.`);
     const typeText = cell('type').toLowerCase();
     let kind: Kind;
@@ -141,7 +145,7 @@ export function importCsv(text: string, ledger: Ledger): ImportResult {
     else if (typeText === '') kind = signed && cents > 0 ? 'income' : 'expense';
     else return addError(`Row ${line}: type “${cell('type')}” should be expense or income.`);
     const amount = Math.abs(cents);
-    const catName = cell('category').replace(/^'/, '') || (kind === 'income' ? 'Other income' : 'Other');
+    const catName = unguardCell(cell('category')) || (kind === 'income' ? 'Other income' : 'Other');
     let category = byName.get(`${kind}:${catName.toLowerCase()}`);
     if (!category) {
       category = {
@@ -156,7 +160,7 @@ export function importCsv(text: string, ledger: Ledger): ImportResult {
       byName.set(`${kind}:${catName.toLowerCase()}`, category);
       result.newCategories.push(category);
     }
-    const note = cell('note').replace(/^'(?=[=+\-@])/, '').slice(0, 120);
+    const note = unguardCell(cell('note')).slice(0, 120);
     const currency = cell('currency').toUpperCase();
     if (/^[A-Z]{3}$/.test(currency) && currency !== ledger.currency) currencies.add(currency);
     const record = { date, kind, categoryId: category.id, amount, note };
@@ -172,9 +176,17 @@ export function importCsv(text: string, ledger: Ledger): ImportResult {
   return result;
 }
 
-const dedupeKey = (t: Omit<Transaction, 'id'>): string => JSON.stringify([t.date, t.kind, t.categoryId, t.amount, t.note]);
+const dedupeKey = (t: Omit<Transaction, 'id'>): string => JSON.stringify([t.date, t.kind, t.categoryId, t.amount, t.note.trim()]);
 
 /** Whether a signed-amount file (no type column) uses negative numbers, meaning positives are income. */
-function hasNegative(rows: string[][], amountCol: number, delimiter: string): boolean {
-  return rows.slice(1).some((r) => (parseAmount(r[amountCol] ?? '', delimiter === ';') ?? 0) < 0);
+function hasNegative(rows: string[][], amountCol: number, decimalComma: boolean): boolean {
+  return rows.slice(1).some((r) => (parseAmount(r[amountCol] ?? '', decimalComma) ?? 0) < 0);
+}
+
+/**
+ * Whether amounts are written with a decimal point ("12.50", no comma). Semicolon-separated files usually use
+ * decimal commas, but not always: one such amount decides it.
+ */
+function usesDecimalPoint(rows: string[][], amountCol: number): boolean {
+  return rows.slice(1).some((r) => /^[^\d,]*\d+\.\d{1,2}[^\d,]*$/.test((r[amountCol] ?? '').trim()));
 }

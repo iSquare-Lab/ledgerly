@@ -81,6 +81,34 @@ describe('import and export', () => {
     expect(again.skippedDuplicates).toBe(2);
   });
 
+  it('undoes the formula guard the same way for categories and notes, and only where it was added', () => {
+    const ledger = emptyLedger();
+    ledger.categories.push({ id: 'odd', name: '+Extras', kind: 'expense', budget: 0, slot: 0, icon: 'tag' });
+    ledger.categories.push({ id: 'quote', name: "'Til payday", kind: 'expense', budget: 0, slot: 0, icon: 'tag' });
+    ledger.transactions = [
+      { id: '1', date: '2026-10-01', kind: 'expense', categoryId: 'odd', amount: 100, note: '@home' },
+      { id: '2', date: '2026-10-02', kind: 'expense', categoryId: 'quote', amount: 200, note: "'quoted'" },
+    ];
+    const csv = exportCsv(ledger);
+    expect(csv).toContain("'+Extras");
+    const result = importCsv(csv, emptyLedger());
+    expect(result.newCategories.map((c) => c.name).toSorted()).toEqual(["'Til payday", '+Extras']);
+    expect(result.transactions.map((t) => t.note).toSorted()).toEqual(["'quoted'", '@home']);
+  });
+
+  it('matches existing rows even when a stored note has stray spaces', () => {
+    const ledger = emptyLedger();
+    ledger.transactions = [{ id: '1', date: '2026-10-03', kind: 'expense', categoryId: 'groceries', amount: 8450, note: 'Shop ' }];
+    const result = importCsv('date,type,category,amount,note\n2026-10-03,expense,Groceries,84.50,Shop\n', ledger);
+    expect(result.skippedDuplicates).toBe(1);
+  });
+
+  it('reads semicolon files with decimal points too', () => {
+    const result = importCsv('date;type;amount\n2026-10-03;expense;12.50\n2026-10-04;expense;1,234.50\n', emptyLedger());
+    expect(result.errors).toEqual([]);
+    expect(result.transactions.map((t) => t.amount)).toEqual([1250, 123450]);
+  });
+
   it('warns when the file names another currency than the ledger', () => {
     const text = 'date,type,category,amount,currency,note\n2026-10-03,expense,Groceries,12.00,eur,Market\n2026-10-04,expense,Groceries,8.00,USD,Shop\n';
     const result = importCsv(text, emptyLedger('USD'));
