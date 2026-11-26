@@ -175,14 +175,14 @@ function renderTrend(): void {
   const width = Math.max(300, Math.floor(host.clientWidth));
   // Up to six months ending with the one in view, starting no earlier than the first month with data (at least three).
   const first = ledger.transactions.reduce((m, t) => (monthOf(t.date) < m ? monthOf(t.date) : m), view.month);
-  const start = [addMonths(view.month, -5), first].sort()[1];
+  const start = [addMonths(view.month, -5), first].toSorted()[1];
   const months = monthRange(start < addMonths(view.month, -2) ? start : addMonths(view.month, -2), view.month);
   const expenseCats = ledger.categories.filter((c) => c.kind === 'expense');
   const data: TrendMonth[] = months.map((m) => {
     const s = summarise(ledger, m);
     const bySlot = new Map<number, number>();
     for (const x of s.byCategory) bySlot.set(x.category.slot, (bySlot.get(x.category.slot) ?? 0) + x.spent);
-    const slots = [...new Set(expenseCats.map((c) => c.slot))].sort((a, b) => (a === 0 ? 1 : b === 0 ? -1 : a - b));
+    const slots = [...new Set(expenseCats.map((c) => c.slot))].toSorted((a, b) => (a === 0 ? 1 : b === 0 ? -1 : a - b));
     return {
       month: m,
       label: monthName(m, 'short'),
@@ -507,7 +507,7 @@ $('import-form').addEventListener('submit', (e) => {
   ledger = { ...ledger, categories: [...ledger.categories, ...r.newCategories], transactions: [...ledger.transactions, ...r.transactions] };
   pendingImport = null;
   importDialog.close();
-  const latest = r.transactions.map((t) => t.date).sort().pop();
+  const latest = r.transactions.map((t) => t.date).toSorted().at(-1);
   if (latest) view.month = monthOf(latest);
   commit();
   toast(`${r.transactions.length} transactions imported.`);

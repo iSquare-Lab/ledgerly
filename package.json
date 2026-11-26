@@ -5,6 +5,11 @@
   "type": "module",
   "description": "See where your money goes each month without linking a bank.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iSquare-Lab/ledgerly"
+  },
+  "homepage": "https://github.com/iSquare-Lab/ledgerly",
   "engines": {
     "node": ">=22"
   },
@@ -13,9 +18,11 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings"
   },
   "devDependencies": {
+    "oxlint": "^1.95.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"

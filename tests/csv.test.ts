@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { exportCsv, importCsv, parseCsv, toCsv } from '../src/lib/csv';
-import { emptyLedger } from '../src/lib/model';
+import { emptyLedger, type Transaction } from '../src/lib/model';
+
+const pick = (t: Transaction) => [t.date, t.kind, t.categoryId, t.amount, t.note].join('|');
 
 describe('parseCsv', () => {
   it('handles quotes, escaped quotes, embedded newlines, CRLF and a BOM', () => {
@@ -42,8 +44,7 @@ describe('import and export', () => {
     const result = importCsv(csv, fresh);
     expect(result.errors).toEqual([]);
     expect(result.newCategories).toEqual([]);
-    const pick = (t: { date: string; kind: string; categoryId: string; amount: number; note: string }) => [t.date, t.kind, t.categoryId, t.amount, t.note];
-    expect(result.transactions.map(pick).sort()).toEqual(ledger.transactions.map(pick).sort());
+    expect(result.transactions.map(pick).toSorted()).toEqual(ledger.transactions.map(pick).toSorted());
   });
 
   it('skips duplicates already in the ledger', () => {

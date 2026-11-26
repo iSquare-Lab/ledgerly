@@ -46,8 +46,8 @@ const safeCell = (v: string): string => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v);
 
 export function exportCsv(ledger: Ledger, transactions: Transaction[] = ledger.transactions): string {
   const name = new Map(ledger.categories.map((c) => [c.id, c.name]));
-  const rows = [...transactions]
-    .sort((a, b) => a.date.localeCompare(b.date))
+  const rows = transactions
+    .toSorted((a, b) => a.date.localeCompare(b.date))
     .map((t) => [
       t.date,
       t.kind,

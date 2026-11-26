@@ -62,7 +62,7 @@ export function exampleMonth(key: MonthKey, lastDay: number): Transaction[] {
   if (rnd() > 0.35) add(day(4, 26), 'expense', 'health', between(9, 32), 'Pharmacy');
   if (rnd() > 0.3) add(day(10, 27), 'expense', 'fun', between(16, 58), m % 2 ? 'Concert tickets' : 'Cinema');
   add(day(3, 27), 'expense', 'other', between(12, 38), 'Haircut');
-  return out.sort((a, b) => a.date.localeCompare(b.date));
+  return out.toSorted((a, b) => a.date.localeCompare(b.date));
 }
 
 /** A ledger with example data for the current month (up to today) and the two before it. */

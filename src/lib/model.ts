@@ -99,7 +99,7 @@ export interface MonthSummary {
 export function summarise(ledger: Ledger, month: MonthKey): MonthSummary {
   const transactions = ledger.transactions
     .filter((t) => monthOf(t.date) === month)
-    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+    .toSorted((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
   const spentBy = new Map<string, number>();
   let income = 0;
   let spent = 0;

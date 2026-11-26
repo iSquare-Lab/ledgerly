@@ -56,7 +56,7 @@ describe('example data', () => {
   it('covers three months, all marked as examples, never in the future', () => {
     const ledger = exampleLedger(today);
     const months = new Set(ledger.transactions.map((t) => t.date.slice(0, 7)));
-    expect([...months].sort()).toEqual(['2026-09', '2026-10', '2026-11']);
+    expect([...months].toSorted()).toEqual(['2026-09', '2026-10', '2026-11']);
     expect(ledger.transactions.every((t) => t.example)).toBe(true);
     expect(ledger.transactions.every((t) => t.date <= '2026-11-17')).toBe(true);
     expect(ledger.transactions.every((t) => isValidDate(t.date) && t.amount > 0)).toBe(true);
